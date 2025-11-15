@@ -1,98 +1,68 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
-import tempfile
 import cv2
-from tensorflow.keras.preprocessing import image
-import plotly.graph_objects as go
-from utils.video_processing import extract_frames
+import tempfile
+from PIL import Image
 
-# -------------------- APP CONFIG --------------------
-st.set_page_config(page_title="Zero-Trust Deepfake Detector", layout="wide")
-st.title("🛡️ Zero-Trust Deepfake Detector")
-st.caption("Adversarially Robust Detection with Full Explainability")
-
-# -------------------- MODEL LOADING --------------------
+# Load your model only once for efficiency
 @st.cache_resource
 def load_model():
-    return tf.keras.models.load_model("deepfake_detection_best.keras")
+    model = tf.keras.models.load_model("deepfake_detection_best.keras")
+    return model
 
-with st.spinner("Loading detection model..."):
-    model = load_model()
+model = load_model()
 
-# -------------------- INTERFACE LAYOUT --------------------
-col1, col2 = st.columns([1, 1])
+# Streamlit UI
+st.title("🎭 Deepfake Video Detection")
+st.write("Upload a video file to analyze whether it’s **real or fake** using a deep learning model.")
 
-with col1:
-    st.header("📤 Upload Video")
-    uploaded_file = st.file_uploader(
-        "Choose a video file (MP4, AVI, MOV)", 
-        type=["mp4", "avi", "mov"]
-    )
+# File uploader
+uploaded_video = st.file_uploader("📤 Upload a video", type=["mp4", "avi", "mov", "mkv"])
 
-    if uploaded_file:
-        # Save the uploaded video temporarily
-        tfile = tempfile.NamedTemporaryFile(delete=False)
-        tfile.write(uploaded_file.read())
+# Preprocessing function
+def preprocess_frame(frame):
+    frame = cv2.resize(frame, (224, 224))  # adjust if your model uses different input size
+    frame = frame.astype("float32") / 255.0
+    return np.expand_dims(frame, axis=0)
 
-        # Display uploaded video
-        st.video(tfile.name)
-        analyze = st.button("🔍 Analyze Video")
+if uploaded_video is not None:
+    # Save temp file
+    tfile = tempfile.NamedTemporaryFile(delete=False)
+    tfile.write(uploaded_video.read())
+    video_path = tfile.name
 
-with col2:
-    st.header("🎯 Detection Results")
-    result_placeholder = st.empty()
+    # Display uploaded video
+    st.video(video_path)
 
-# -------------------- PROCESSING --------------------
-if uploaded_file and analyze:
-    with st.spinner("Analyzing video frames..."):
-        frames = extract_frames(tfile.name, frame_rate=1)
-        predictions = []
+    # Process video
+    st.write("🔍 Analyzing video frames...")
+    cap = cv2.VideoCapture(video_path)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        for frame in frames:
-            img = cv2.resize(frame, (299, 299))  # Xception input size
-            img_array = np.expand_dims(img, axis=0) / 255.0
-            pred = model.predict(img_array, verbose=0)[0][0]
-            predictions.append(pred)
+    sampled_predictions = []
+    frame_interval = max(total_frames // 20, 1)  # sample ~20 frames evenly
 
-        # Aggregate predictions
-        avg_pred = np.mean(predictions)
-        fake_prob = avg_pred * 100
-        real_prob = (1 - avg_pred) * 100
-        confidence = max(fake_prob, real_prob)
-        label = "✅ LIKELY REAL" if avg_pred < 0.5 else "❌ LIKELY FAKE"
-        color = "#00CC66" if avg_pred < 0.5 else "#FF4B4B"
+    for i in range(0, total_frames, frame_interval):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, i)
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pred = model.predict(preprocess_frame(frame_rgb))[0][0]
+        sampled_predictions.append(pred)
 
-    # -------------------- DISPLAY RESULTS --------------------
-    with col2:
-        st.markdown(
-            f"""
-            <div style="background-color:{color}20;padding:1.2rem;border-radius:10px;">
-                <h3 style="color:{color};text-align:center;">{label}</h3>
-                <p style="text-align:center;font-size:16px;">
-                    Confidence: <b>{confidence:.2f}%</b><br>
-                    Real Probability: {real_prob:.2f}%<br>
-                    Fake Probability: {fake_prob:.2f}%
-                </p>
-            </div>
-            """, unsafe_allow_html=True
-        )
+    cap.release()
 
-        # Plotly Gauge Visualization
-        fig = go.Figure(go.Indicator(
-            mode="gauge+number+delta",
-            value=confidence,
-            delta={'reference': 50, 'increasing': {'color': "red"}, 'decreasing': {'color': "green"}},
-            gauge={
-                'axis': {'range': [0, 100]},
-                'bar': {'color': color},
-                'steps': [
-                    {'range': [0, 50], 'color': "#E5F5E0"},
-                    {'range': [50, 100], 'color': "#FFEBEE"}
-                ],
-                'threshold': {'line': {'color': color, 'width': 4}, 'thickness': 0.8, 'value': confidence}
-            },
-            title={'text': "Confidence Level (%)"}
-        ))
-        fig.update_layout(height=300, margin=dict(t=50, b=0, l=0, r=0))
-        st.plotly_chart(fig, use_container_width=True)
+    if len(sampled_predictions) > 0:
+        avg_pred = np.mean(sampled_predictions)
+        label = "FAKE" if avg_pred > 0.5 else "REAL"
+        confidence = avg_pred if label == "FAKE" else 1 - avg_pred
+
+        st.subheader(f"🧠 Prediction: **{label}**")
+        st.write(f"Confidence: **{confidence:.2f}**")
+    else:
+        st.warning("Could not extract frames from the video. Try another file.")
+
+st.markdown("---")
+st.caption("Model: `deepfake_detection_best.keras` | Built with Streamlit & TensorFlow")

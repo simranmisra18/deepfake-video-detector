@@ -1,0 +1,6 @@
+streamlit
+tensorflow>=2.12
+opencv-python
+numpy
+Pillow
+streamlit-gauge

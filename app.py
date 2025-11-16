@@ -11,8 +11,8 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Model, Sequential
 
 st.set_page_config(page_title="Deepfake Detection", layout="centered")
-st.title("🎭 Deepfake Detection (Meso4 + Bi-GRU)")
-st.write("Upload a video to detect whether it’s **REAL** or **FAKE** using the trained Meso4 model.")
+st.title("🎭 Deepfake Detection (Xception + Bi-GRU)")
+st.write("Upload a video to detect whether it’s **REAL** or **FAKE** using the trained Xception model.")
 
 # --- Model parameters ---
 SEQ_LEN = 10
@@ -116,4 +116,4 @@ if uploaded_video:
         st.success("✅ Analysis complete!")
 
 
-st.caption("Model: Meso4 + Bi-GRU | Framework: TensorFlow + Streamlit")
+st.caption("Model: Xception + Bi-GRU | Framework: TensorFlow + Streamlit")

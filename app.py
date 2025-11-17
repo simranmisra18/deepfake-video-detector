@@ -96,7 +96,7 @@ def generate_gradcam(model, frame, layer_name="last_conv", cls_idx=None):
     heatmap = tf.reduce_sum(tf.multiply(pooled_grads, conv_outputs), axis=-1)
     heatmap = np.maximum(heatmap, 0)
     heatmap /= np.max(heatmap) + 1e-8
-    heatmap = cv2.resize(heatmap.numpy(), (frame.shape[1], frame.shape[0]))
+    heatmap = cv2.resize(heatmap, (frame.shape[1], frame.shape[0]))
 
     # Overlay heatmap
     heatmap = cv2.applyColorMap(np.uint8(255 * heatmap), cv2.COLORMAP_JET)

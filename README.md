@@ -30,16 +30,16 @@ Gradient Sign Method (FGSM), Projected Gradient Descent
 such perturbations. 
 
 The following techniques and tools are employed:
-• CNNs (MesoNet, Xception) – For spatial feature extraction.
-• RNNs (GRU/BiGRU) – For temporal feature learning
+- CNNs (MesoNet, Xception) – For spatial feature extraction.
+- RNNs (GRU/BiGRU) – For temporal feature learning
 across frames.
-• Noise Augmentation – Gaussian, blur, compression to test
+- Noise Augmentation – Gaussian, blur, compression to test
 robustness.
-• Adversarial Augmentation – 2D-Malafide learned filter
+- Adversarial Augmentation – 2D-Malafide learned filter
 to generate perturbed fake frames for robustness experiments.
-• Transfer Learning – Xception pretrained weights for
+- Transfer Learning – Xception pretrained weights for
 feature reuse.
-• Web Deployment (Streamlit) – Upload interface, frame
+- Web Deployment (Streamlit) – Upload interface, frame
 previews, real-time predictions.
 
 <img width="267" height="368" alt="image" src="https://github.com/user-attachments/assets/22ce3e46-9e3d-47e1-8b30-c75ef731e475" />
